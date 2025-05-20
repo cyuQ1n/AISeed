@@ -2,14 +2,12 @@ import time
 import datetime
 from loguru import logger
 from openai import OpenAI
-from typing import List, Dict, Any, Optional
-import urllib.parse
+from typing import List, Dict
 
 from config import (
     DEFAULT_MODEL, 
-    DEFAULT_API_BASE, 
-    DEFAULT_API_KEY, 
-    API_CONFIGS,
+    API_BASE, 
+    API_KEY, 
     MAX_RETRIES,
     RETRY_DELAY,
     DEFAULT_TEMPERATURE
@@ -24,22 +22,15 @@ logger.add(
     format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}"
 )
 
-# Initialize API client dictionary
-clients = {
-    "default": OpenAI(base_url=DEFAULT_API_BASE, api_key=DEFAULT_API_KEY)
-}
-
-# Initialize all configured API clients
-for api_name, config in API_CONFIGS.items():
-    clients[api_name] = OpenAI(base_url=config["API_BASE"], api_key=config["API_KEY"])
+# Initialize API client
+client = OpenAI(base_url=API_BASE, api_key=API_KEY)
 
 def get_chat_completion(
     messages: List[Dict[str, str]], 
     model_name: str = DEFAULT_MODEL, 
     temperature: float = DEFAULT_TEMPERATURE, 
     max_retries: int = MAX_RETRIES, 
-    retry_delay: int = RETRY_DELAY, 
-    api_endpoint: str = "default"
+    retry_delay: int = RETRY_DELAY
 ) -> str:
     """
     Get a response from the LLM
@@ -50,30 +41,19 @@ def get_chat_completion(
         temperature: Temperature parameter for response generation
         max_retries: Maximum number of retries
         retry_delay: Delay between retries in seconds
-        api_endpoint: Name of the API endpoint configuration to use
         
     Returns:
         Generated response text
     """
-    # Get the appropriate API client
-    if api_endpoint in clients:
-        client = clients[api_endpoint]
-    else:
-        logger.warning(f"API endpoint '{api_endpoint}' not found, using default")
-        client = clients["default"]
-        
-    # If using a specific API endpoint configuration, use its model name unless explicitly specified
-    if api_endpoint in API_CONFIGS and model_name == DEFAULT_MODEL:
-        model_name = API_CONFIGS[api_endpoint]["BASE_MODEL"]
-    
-    # 记录用户的最后一条消息（一般是当前查询）
+    # Log the user's query
     user_message = ""
     for msg in messages:
         if msg.get("role") == "user":
             user_message = msg.get("content", "")
     
-    logger.info(f"用户查询: {user_message}")
+    logger.info(f"User query: {user_message}")
     
+    # Attempt to get completion with retries
     retries = 0
     while retries < max_retries:
         try:
@@ -89,22 +69,23 @@ def get_chat_completion(
             total_tokens = completion.usage.total_tokens
             
             logger.info(
-                f"调用时间: {datetime.datetime.now()}, API端点: {api_endpoint}, "
-                f"模型: {model_name}, Token数: {total_tokens}, 耗时: {elapsed_time:.2f}秒"
+                f"Call time: {datetime.datetime.now()}, "
+                f"Model: {model_name}, Tokens: {total_tokens}, "
+                f"Duration: {elapsed_time:.2f}s"
             )
             
-            # 记录模型回复（限制长度避免日志过长）
+            # Log a preview of the response
             max_log_length = 100
             log_response = output[:max_log_length] + ("..." if len(output) > max_log_length else "")
-            logger.info(f"模型回复: {log_response}")
+            logger.info(f"Model response: {log_response}")
             
             return output
             
         except Exception as e:
             retries += 1
-            logger.error(f"get_chat_completion 调用出错 (第{retries}/{max_retries}次尝试): {str(e)}")
+            logger.error(f"Error calling get_chat_completion (attempt {retries}/{max_retries}): {str(e)}")
             if retries < max_retries:
                 time.sleep(retry_delay)
             else:
-                logger.error("达到最大重试次数，返回错误信息")
-                return f"错误: 模型调用失败，原因: {str(e)}" 
+                logger.error("Maximum retries reached, returning error message")
+                return f"Error: Model call failed. Reason: {str(e)}" 

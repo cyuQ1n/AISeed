@@ -1,39 +1,35 @@
-# LLM Question Answering API
+# Simplified LLM Question Answering API
 
-A simple, reusable FastAPI backend for interacting with LLM models via OpenAI-compatible APIs.
+A streamlined FastAPI backend for interacting with LLM models via OpenAI-compatible APIs.
 
 ## Features
 
-- Multiple API endpoint configurations
-- Retry mechanism for API calls
+- Simple configuration
 - Structured logging
-- Simple and advanced chat endpoints
+- Simple and full chat endpoints
 - Type validation with Pydantic
 - Interactive API documentation
 
 ## Project Structure
 
 ```
-├── app.py              # FastAPI application and routes
-├── config.py           # Configuration settings
-├── prompts.py          # System prompts and message templates
-├── schemas.py          # Pydantic models for API
-├── utils.py            # Utility functions and logger setup
-├── requirements.txt    # Project dependencies
-└── .env.example        # Example environment variables
+├── app.py             # FastAPI application and routes
+├── config.py          # Configuration settings and message templates
+├── schemas.py         # Pydantic models for API
+├── utils.py           # Utility functions and logger setup
+└── requirements.txt   # Project dependencies
 ```
 
 ## Setup
 
 1. Clone the repository
-2. Copy `.env.example` to `.env` and fill in your API keys
-3. Install dependencies:
+2. Install dependencies:
 
 ```
 pip install -r requirements.txt
 ```
 
-4. Run the application:
+3. Run the application:
 
 ```
 python app.py
@@ -47,13 +43,16 @@ uvicorn app:app --host 0.0.0.0 --port 8989 --reload
 
 ## Configuration
 
-You can configure the server settings by editing the `config.py` file or by setting environment variables:
+You can configure the server by editing the `config.py` file or by setting environment variables:
 - `HOST`: Server host (default: 0.0.0.0)
 - `PORT`: Server port (default: 8989)
+- `API_BASE`: OpenAI API base URL
+- `API_KEY`: OpenAI API key
+- `DEFAULT_MODEL`: Default model to use
 
 ## API Documentation
 
-The API includes interactive documentation:
+Interactive documentation available at:
 - **Swagger UI**: `http://localhost:8989/docs`
 - **ReDoc**: `http://localhost:8989/redoc`
 
@@ -64,7 +63,7 @@ The API includes interactive documentation:
 
 ### Chat Completion
 - `POST /chat`: Full chat completion with custom messages
-- `POST /simple_chat`: Simplified chat endpoint with just a message parameter
+- `POST /simple`: Simplified chat endpoint with just a message parameter
 
 ## API Usage Examples
 
@@ -74,10 +73,10 @@ The API includes interactive documentation:
 import requests
 
 response = requests.post(
-    "http://localhost:8989/simple_chat",
+    "http://localhost:8989/simple",
     params={
         "message": "What is the capital of France?",
-        "api_endpoint": "default"
+        "model_name": "Qwen/Qwen2.5-7B-Instruct"
     }
 )
 print(response.json())
@@ -96,16 +95,11 @@ response = requests.post(
             {"role": "user", "content": "What is the capital of France?"}
         ],
         "model_name": "Qwen/Qwen2.5-7B-Instruct",
-        "temperature": 0.7,
-        "api_endpoint": "default"
+        "temperature": 0.7
     }
 )
 print(response.json())
 ```
-
-## Configuration
-
-Edit the `config.py` file to add or modify API endpoint configurations. You can define multiple API endpoints with different models and base URLs.
 
 ## License
 

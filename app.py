@@ -2,12 +2,12 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from config import (
-    APP_NAME, APP_VERSION, APP_DESCRIPTION, DEFAULT_MODEL,
-    HOST, PORT, DOCS_URL, REDOC_URL, OPENAPI_URL
+    APP_NAME, APP_VERSION, APP_DESCRIPTION,
+    DEFAULT_MODEL,HOST, PORT, DOCS_URL, REDOC_URL, OPENAPI_URL
 )
+from prompts import create_chat_messages, DEFAULT_SYSTEM_PROMPT
 from schemas import ChatRequest, ChatResponse, HealthResponse, Message
 from utils import get_chat_completion, logger
-from prompts import create_chat_messages, DEFAULT_SYSTEM_PROMPT
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -42,9 +42,8 @@ async def chat_endpoint(request: ChatRequest):
     """
     try:
         # Get parameters with defaults
-        model_name = request.model_name or DEFAULT_MODEL
+        modelName = request.modelName or DEFAULT_MODEL
         temperature = request.temperature or 0.7
-        api_endpoint = request.api_endpoint or "default"
         
         # Convert request messages to format expected by OpenAI
         messages = [{"role": msg.role, "content": msg.content} for msg in request.messages]
@@ -52,34 +51,29 @@ async def chat_endpoint(request: ChatRequest):
         # Get completion from the model
         response = get_chat_completion(
             messages=messages,
-            model_name=model_name,
-            temperature=temperature,
-            api_endpoint=api_endpoint
+            model_name=modelName,
+            temperature=temperature
         )
         
         # Return the response
         return ChatResponse(
             response=response,
-            model_used=model_name,
-            api_endpoint=api_endpoint
+            modelUsed=modelName
         )
         
     except Exception as e:
         logger.error(f"Error in chat endpoint: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error processing request: {str(e)}")
 
-@app.post("/simple_chat", response_model=ChatResponse)
+@app.post("/simple", response_model=ChatResponse)
 async def simple_chat_endpoint(
     message: str,
     system_prompt: str = DEFAULT_SYSTEM_PROMPT,
-    model_name: str = DEFAULT_MODEL,
-    temperature: float = 0.7,
-    api_endpoint: str = "default"
+    modelName: str = DEFAULT_MODEL,
+    temperature: float = 0.7
 ):
     """
     Simple chat endpoint that only requires a message
-    
-    Simplifies the API for basic use cases
     """
     try:
         # Create messages using the helper function
@@ -94,16 +88,14 @@ async def simple_chat_endpoint(
         # Get completion
         response = get_chat_completion(
             messages=messages_dict,
-            model_name=model_name,
-            temperature=temperature,
-            api_endpoint=api_endpoint
+            model_name=modelName,
+            temperature=temperature
         )
         
         # Return the response
         return ChatResponse(
             response=response,
-            model_used=model_name,
-            api_endpoint=api_endpoint
+            modelUsed=modelName
         )
         
     except Exception as e:
@@ -114,4 +106,5 @@ if __name__ == "__main__":
     import uvicorn
     logger.info(f"Starting server at http://{HOST}:{PORT}")
     logger.info(f"API documentation available at http://{HOST}:{PORT}{DOCS_URL}")
+    logger.info(f"API documentation available at http://localhost:{PORT}{DOCS_URL}")
     uvicorn.run("app:app", host=HOST, port=PORT, reload=False) 
